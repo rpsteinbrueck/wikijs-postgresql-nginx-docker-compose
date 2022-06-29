@@ -1,0 +1,39 @@
+# compose file for wiki-js
+# 3 services: mongo for the mongoDB, wiki for wiki-js itself, and nginw for SSL support
+# do not change service names, they are use in config file sin the docker images (wiki connects to 'mongo' and nginx connects to 'wiki')
+# only port 443 is exposed. all others are internal to the default network automatically created by compose.
+version: '3'
+services:
+  db:
+    image: postgres:11-alpine
+    environment:
+      POSTGRES_DB: wiki
+      POSTGRES_PASSWORD: dbpassword
+      POSTGRES_USER: dbuser
+    logging:
+      driver: "none"
+    restart: unless-stopped
+    volumes:
+      - db-data:/var/lib/postgresql/data
+  wiki:
+    build: ./wiki
+    #- WIKI_HOST=https://127.0.0.1:443 # Change hostname here if required
+    #- WIKI_ADMIN_EMAIL=admin@example.com
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: dbuser
+      DB_PASS: dbpassword
+      DB_NAME: wiki
+    restart: unless-stopped
+    depends_on:
+      - db
+  nginx:
+    build: ./nginx
+    ports:
+    - "443:443"
+    depends_on:
+      - wiki
+volumes:
+  db-data:
